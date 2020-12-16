@@ -1,6 +1,6 @@
 {
-    "name": "pip-services-datadog-node",
+    "name": "pip-services-datadog-go",
     "registry": "pipdevs",
-    "version": "3.0.0",
+    "version": "1.0.0",
     "build": 0
 }
