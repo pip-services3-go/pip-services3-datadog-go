@@ -1,228 +1,217 @@
-// /** @module count */
-// /** @hidden */
-// let os = require('os');
+package count
 
-// import { ConfigParams } from 'pip-services3-commons-node';
-// import { IReferenceable } from 'pip-services3-commons-node';
-// import { IReferences } from 'pip-services3-commons-node';
-// import { Descriptor } from 'pip-services3-commons-node';
-// import { IOpenable } from 'pip-services3-commons-node';
-// import { CachedCounters, CounterType } from 'pip-services3-components-node';
-// import { Counter } from 'pip-services3-components-node';
-// import { CompositeLogger } from 'pip-services3-components-node';
-// import { ContextInfo } from 'pip-services3-components-node';
+import (
+	"os"
 
-// import { DataDogMetricsClient } from '../clients/DataDogMetricsClient';
-// import { DataDogMetric } from '../clients/DataDogMetric';
-// import { DataDogMetricPoint } from '../clients/DataDogMetricPoint';
-// import { DataDogMetricType } from '../clients/DataDogMetricType';
+	cconf "github.com/pip-services3-go/pip-services3-commons-go/config"
+	cref "github.com/pip-services3-go/pip-services3-commons-go/refer"
+	ccount "github.com/pip-services3-go/pip-services3-components-go/count"
+	cinfo "github.com/pip-services3-go/pip-services3-components-go/info"
+	clog "github.com/pip-services3-go/pip-services3-components-go/log"
+	clients1 "github.com/pip-services3-go/pip-services3-datadog-go/clients"
+)
 
-// /**
-//  * Performance counters that send their metrics to DataDog service.
-//  * 
-//  * DataDog is a popular monitoring SaaS service. It collects logs, metrics, events
-//  * from infrastructure and applications and analyze them in a single place.
-//  * 
-//  * ### Configuration parameters ###
-//  * 
-//  * - connection(s):           
-//  *   - discovery_key:         (optional) a key to retrieve the connection from [[https://pip-services3-node.github.io/pip-services3-components-node/interfaces/connect.idiscovery.html IDiscovery]]
-//  *     - protocol:            (optional) connection protocol: http or https (default: https)
-//  *     - host:                (optional) host name or IP address (default: api.datadoghq.com)
-//  *     - port:                (optional) port number (default: 443)
-//  *     - uri:                 (optional) resource URI or connection string with all parameters in it
-//  * - credential:
-//  *     - access_key:          DataDog client api key
-//  * - options:
-//  *   - retries:               number of retries (default: 3)
-//  *   - connect_timeout:       connection timeout in milliseconds (default: 10 sec)
-//  *   - timeout:               invocation timeout in milliseconds (default: 10 sec)
-//  * 
-//  * ### References ###
-//  * 
-//  * - <code>\*:logger:\*:\*:1.0</code>         (optional) [[https://pip-services3-node.github.io/pip-services3-components-node/interfaces/log.ilogger.html ILogger]] components to pass log messages
-//  * - <code>\*:counters:\*:\*:1.0</code>         (optional) [[https://pip-services3-node.github.io/pip-services3-components-node/interfaces/count.icounters.html ICounters]] components to pass collected measurements
-//  * - <code>\*:discovery:\*:\*:1.0</code>        (optional) [[https://pip-services3-node.github.io/pip-services3-components-node/interfaces/connect.idiscovery.html IDiscovery]] services to resolve connection
-//  * 
-//  * @see [[https://pip-services3-node.github.io/pip-services3-rpc-node/classes/services.restservice.html RestService]]
-//  * @see [[https://pip-services3-node.github.io/pip-services3-rpc-node/classes/services.commandablehttpservice.html CommandableHttpService]]
-//  * 
-//  * ### Example ###
-//  * 
-//  *     let counters = new DataDogCounters();
-//  *     counters.configure(ConfigParams.fromTuples(
-//  *         "credential.access_key", "827349874395872349875493"
-//  *     ));
-//  * 
-//  *     counters.open("123", (err) => {
-//  *         ...
-//  *     });
-//  * 
-//  *     counters.increment("mycomponent.mymethod.calls");
-//  *     let timing = counters.beginTiming("mycomponent.mymethod.exec_time");
-//  *     try {
-//  *         ...
-//  *     } finally {
-//  *         timing.endTiming();
-//  *     }
-//  * 
-//  *     counters.dump();
-//  */
-// export class DataDogCounters extends CachedCounters implements IReferenceable, IOpenable {
-//     private _client: DataDogMetricsClient = new DataDogMetricsClient();
-//     private _logger = new CompositeLogger();
-//     private _opened: boolean = false;
-//     private _source: string;
-//     private _instance: string = os.hostname();
-//     private _requestRoute: string;
+/**
+ * Performance counters that send their metrics to DataDog service.
+ *
+ * DataDog is a popular monitoring SaaS service. It collects logs, metrics, events
+ * from infrastructure and applications and analyze them in a single place.
+ *
+ * ### Configuration parameters ###
+ *
+ * - connection(s):
+ *   - discovery_key:         (optional) a key to retrieve the connection from [[IDiscovery]]
+ *     - protocol:            (optional) connection protocol: http or https (default: https)
+ *     - host:                (optional) host name or IP address (default: api.datadoghq.com)
+ *     - port:                (optional) port number (default: 443)
+ *     - uri:                 (optional) resource URI or connection string with all parameters in it
+ * - credential:
+ *     - access_key:          DataDog client api key
+ * - options:
+ *   - retries:               number of retries (default: 3)
+ *   - connect_timeout:       connection timeout in milliseconds (default: 10 sec)
+ *   - timeout:               invocation timeout in milliseconds (default: 10 sec)
+ *
+ * ### References ###
+ *
+ * - \*:logger:\*:\*:1.0         (optional)  [[ILogger]] components to pass log messages
+ * - \*:counters:\*:\*:1.0         (optional) [[ICounters]] components to pass collected measurements
+ * - \*:discovery:\*:\*:1.0        (optional) [[IDiscovery]] services to resolve connection
+ *
+ * See [[RestService]]
+ * See [[CommandableHttpService]]
+ *
+ * ### Example ###
+ *
+ *     counters := NewDataDogCounters();
+ *     counters.Configure(NewConfigParamsFromTuples(
+ *         "credential.access_key", "827349874395872349875493"
+ *     ));
+ *
+ *     err := counters.Open("123",
+ *         ...
+ *
+ *     counters.Increment("mycomponent.mymethod.calls");
+ *      timing := counters.BeginTiming("mycomponent.mymethod.exec_time");
+ *
+ *       ...
+ *
+ *      timing.EndTiming();
+ *
+ *     counters.Dump();
+ */
 
-//     /**
-//      * Creates a new instance of the performance counters.
-//      */
-//     public constructor() {
-//         super();
-//     }
+type DataDogCounters struct {
+	*ccount.CachedCounters
+	client       *clients1.DataDogMetricsClient
+	logger       *clog.CompositeLogger
+	opened       bool
+	source       string
+	instance     string
+	requestRoute string
+}
 
-//     /**
-//      * Configures component by passing configuration parameters.
-//      * 
-//      * @param config    configuration parameters to be set.
-//      */
-//     public configure(config: ConfigParams): void {
-//         super.configure(config);
-//         this._client.configure(config);
+//  NewDataDogCounters - creates a new instance of the performance counters.
+func NewDataDogCounters() *DataDogCounters {
+	c := &DataDogCounters{
+		client: clients1.NewDataDogMetricsClient(nil),
+		logger: clog.NewCompositeLogger(),
+		opened: false,
+	}
+	c.CachedCounters = ccount.InheritCacheCounters(c)
+	c.instance, _ = os.Hostname()
+	return c
+}
 
-//         this._source = config.getAsStringWithDefault("source", this._source);
-//         this._instance = config.getAsStringWithDefault("instance", this._instance);
-//     }
+//  Configure - configures component by passing configuration parameters.
+//   - config    configuration parameters to be set.
+func (c *DataDogCounters) Configure(config *cconf.ConfigParams) {
+	c.CachedCounters.Configure(config)
+	c.client.Configure(config)
 
-//     /**
-// 	 * Sets references to dependent components.
-// 	 * 
-// 	 * @param references 	references to locate the component dependencies. 
-//      */
-//     public setReferences(references: IReferences): void {
-//         this._logger.setReferences(references);
-//         this._client.setReferences(references);
+	c.source = config.GetAsStringWithDefault("source", c.source)
+	c.instance = config.GetAsStringWithDefault("instance", c.instance)
+}
 
-//         let contextInfo = references.getOneOptional<ContextInfo>(
-//             new Descriptor("pip-services", "context-info", "default", "*", "1.0"));
-//         if (contextInfo != null && this._source == null)
-//             this._source = contextInfo.name;
-//         if (contextInfo != null && this._instance == null)
-//             this._instance = contextInfo.contextId;
-//     }
+//  SetReferences - sets references to dependent components.
+//  - references 	references to locate the component dependencies.
+func (c *DataDogCounters) SetReferences(references cref.IReferences) {
+	c.logger.SetReferences(references)
+	c.client.SetReferences(references)
+	ref := references.GetOneOptional(cref.NewDescriptor("pip-services", "context-info", "default", "*", "1.0"))
 
-//     /**
-// 	 * Checks if the component is opened.
-// 	 * 
-// 	 * @returns true if the component has been opened and false otherwise.
-//      */
-//     public isOpen(): boolean {
-//         return this._opened;
-//     }
+	contextInfo, _ := ref.(*cinfo.ContextInfo)
 
-//     /**
-// 	 * Opens the component.
-// 	 * 
-// 	 * @param correlationId 	(optional) transaction id to trace execution through call chain.
-//      * @param callback 			callback function that receives error or null no errors occured.
-//      */
-//     public open(correlationId: string, callback: (err: any) => void): void {
-//         if (this._opened) {
-//             if (callback) callback(null);
-//             return;
-//         }
+	if contextInfo != nil && c.source == "" {
+		c.source = contextInfo.Name
+	}
+	if contextInfo != nil && c.instance == "" {
+		c.instance = contextInfo.ContextId
+	}
+}
 
-//         this._opened = true;
+//  IsOpen - checks if the component is opened.
+//  Returns true if the component has been opened and false otherwise.
+func (c *DataDogCounters) IsOpen() bool {
+	return c.opened
+}
 
-//         this._client.open(correlationId, callback);
-//     }
+// Open - opens the component.
+//   - correlationId 	(optional) transaction id to trace execution through call chain.
+//   Returns  error or nil no errors occured.
+func (c *DataDogCounters) Open(correlationId string) error {
+	if c.opened {
+		return nil
+	}
 
-//     /**
-// 	 * Closes component and frees used resources.
-// 	 * 
-// 	 * @param correlationId 	(optional) transaction id to trace execution through call chain.
-//      * @param callback 			callback function that receives error or null no errors occured.
-//      */
-//     public close(correlationId: string, callback: (err: any) => void): void {
-//         this._opened = false;
+	c.opened = true
+	return c.client.Open(correlationId)
+}
 
-//         this._client.close(correlationId, callback);
-//     }
+//  Close - closes component and frees used resources.
+//   - correlationId 	(optional) transaction id to trace execution through call chain.
+//   Returns  error or null no errors occured.
+func (c *DataDogCounters) Close(correlationId string) error {
+	c.opened = false
 
-//     private convertCounter(counter: Counter): DataDogMetric[] {
-//         switch (counter.type) {
-//             case CounterType.Increment:
-//                 return [{
-//                     metric: counter.name,
-//                     type: DataDogMetricType.Gauge,
-//                     host: this._instance,
-//                     service: this._source,
-//                     points: [{ time: counter.time, value: counter.count }]
-//                 }];
-//             case CounterType.LastValue:
-//                 return [{
-//                     metric: counter.name,
-//                     type: DataDogMetricType.Gauge,
-//                     host: this._instance,
-//                     service: this._source,
-//                     points: [{ time: counter.time, value: counter.last }]
-//                 }];
-//             case CounterType.Interval:
-//             case CounterType.Statistics:
-//                 return [
-//                     {
-//                         metric: counter.name + ".min",
-//                         type: DataDogMetricType.Gauge,
-//                         host: this._instance,
-//                         service: this._source,
-//                         points: [{ time: counter.time, value: counter.min }]
-//                     },
-//                     {
-//                         metric: counter.name + ".average",
-//                         type: DataDogMetricType.Gauge,
-//                         host: this._instance,
-//                         service: this._source,
-//                         points: [{ time: counter.time, value: counter.average }]
-//                     },
-//                     {
-//                         metric: counter.name + ".max",
-//                         type: DataDogMetricType.Gauge,
-//                         host: this._instance,
-//                         service: this._source,
-//                         points: [{ time: counter.time, value: counter.max }]
-//                     }
-//                 ];
-//         }       
+	return c.client.Close(correlationId)
+}
 
-//         return null;
-//     }
+func (c *DataDogCounters) convertCounter(counter *ccount.Counter) []clients1.DataDogMetric {
+	switch counter.Type {
+	case ccount.Increment:
+		return []clients1.DataDogMetric{clients1.DataDogMetric{
+			Metric:  counter.Name,
+			Type:    clients1.Gauge,
+			Host:    c.instance,
+			Service: c.source,
+			Points:  []clients1.DataDogMetricPoint{clients1.DataDogMetricPoint{Time: counter.Time, Value: (float64)(counter.Count)}},
+		}}
 
-//     private convertCounters(counters: Counter[]): DataDogMetric[] {
-//         let metrics: DataDogMetric[] = [];
+	case ccount.LastValue:
+		return []clients1.DataDogMetric{clients1.DataDogMetric{
+			Metric:  counter.Name,
+			Type:    clients1.Gauge,
+			Host:    c.instance,
+			Service: c.source,
+			Points:  []clients1.DataDogMetricPoint{clients1.DataDogMetricPoint{Time: counter.Time, Value: (float64)(counter.Last)}},
+		}}
 
-//         for (let counter of counters) {
-//             let data = this.convertCounter(counter);
-//             if (data != null && data.length > 0)
-//                 metrics.push(...data);
-//         }
+	case ccount.Interval:
+	case ccount.Statistics:
+		return []clients1.DataDogMetric{
+			clients1.DataDogMetric{
+				Metric:  counter.Name + ".min",
+				Type:    clients1.Gauge,
+				Host:    c.instance,
+				Service: c.source,
+				Points:  []clients1.DataDogMetricPoint{clients1.DataDogMetricPoint{Time: counter.Time, Value: (float64)(counter.Min)}},
+			},
+			clients1.DataDogMetric{
+				Metric:  counter.Name + ".average",
+				Type:    clients1.Gauge,
+				Host:    c.instance,
+				Service: c.source,
+				Points:  []clients1.DataDogMetricPoint{clients1.DataDogMetricPoint{Time: counter.Time, Value: (float64)(counter.Average)}},
+			},
+			clients1.DataDogMetric{
+				Metric:  counter.Name + ".max",
+				Type:    clients1.Gauge,
+				Host:    c.instance,
+				Service: c.source,
+				Points:  []clients1.DataDogMetricPoint{clients1.DataDogMetricPoint{Time: counter.Time, Value: (float64)(counter.Max)}},
+			},
+		}
+	}
 
-//         return metrics;
-//     }
+	return nil
+}
 
-//     /**
-//      * Saves the current counters measurements.
-//      * 
-//      * @param counters      current counters measurements to be saves.
-//      */
-//     protected save(counters: Counter[]): void {
-//         let metrics = this.convertCounters(counters);
-//         if (metrics.length == 0) return;
+func (c *DataDogCounters) convertCounters(counters []*ccount.Counter) []clients1.DataDogMetric {
+	metrics := make([]clients1.DataDogMetric, 0)
 
-//         this._client.sendMetrics('datadog-counters', metrics, (err) => {
-//             if (err)
-//                 this._logger.error("datadog-counters", err, "Failed to push metrics to DataDog");
-//         });
-//     }
-// }
+	for _, counter := range counters {
+		data := c.convertCounter(counter)
+
+		if data != nil && len(data) > 0 {
+			metrics = append(metrics, data...)
+		}
+	}
+
+	return metrics
+}
+
+//   Saves the current counters measurements.
+//   - counters      current counters measurements to be saves.
+func (c *DataDogCounters) Save(counters []*ccount.Counter) error {
+	metrics := c.convertCounters(counters)
+	if len(metrics) == 0 {
+		return nil
+	}
+
+	err := c.client.SendMetrics("datadog-counters", metrics)
+	if err != nil {
+		c.logger.Error("datadog-counters", err, "Failed to push metrics to DataDog")
+	}
+	return err
+}

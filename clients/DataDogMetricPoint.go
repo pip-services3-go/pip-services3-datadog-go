@@ -4,5 +4,5 @@ import "time"
 
 type DataDogMetricPoint struct {
 	Time  time.Time `json:"time"`
-	value float64   `json:"value"`
+	Value float64   `json:"value"`
 }

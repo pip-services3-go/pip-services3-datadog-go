@@ -1,7 +1,12 @@
 package clients1
 
 import (
+	"time"
+
 	cconf "github.com/pip-services3-go/pip-services3-commons-go/config"
+	cconv "github.com/pip-services3-go/pip-services3-commons-go/convert"
+	cdata "github.com/pip-services3-go/pip-services3-commons-go/data"
+	cerr "github.com/pip-services3-go/pip-services3-commons-go/errors"
 	cref "github.com/pip-services3-go/pip-services3-commons-go/refer"
 	cauth "github.com/pip-services3-go/pip-services3-components-go/auth"
 	rpcclient "github.com/pip-services3-go/pip-services3-rpc-go/clients"
@@ -44,78 +49,105 @@ func (c *DataDogLogClient) SetReferences(refs cref.IReferences) {
 	c.credentialResolver.SetReferences(refs)
 }
 
-//     func (c*DataDogLogClient) Open(correlationId string) error {
-//         c.credentialResolver.Lookup(correlationId, (err, credential) => {
-//             if (err) {
-//                 callback(err);
-//                 return;
-//             }
+func (c *DataDogLogClient) Open(correlationId string) error {
+	credential, err := c.credentialResolver.Lookup(correlationId)
+	if err != nil {
+		return err
+	}
 
-//             if (credential == null || credential.getAccessKey() == null) {
-//                 err = new ConfigException(correlationId, "NO_ACCESS_KEY", "Missing access key in credentials");
-//                 callback(err);
-//                 return;
-//             }
+	if credential == nil || credential.AccessKey() == "" {
+		err = cerr.NewConfigError(correlationId, "NO_ACCESS_KEY", "Missing access key in credentials")
+		return err
+	}
+	if c.Headers.Value() == nil {
+		c.Headers = *cdata.NewEmptyStringValueMap()
+	}
+	c.Headers.SetAsObject("DD-API-KEY", credential.AccessKey())
+	return c.RestClient.Open(correlationId)
+}
 
-//             c.headers = c.headers || {};
-//             c.headers["DD-API-KEY"] = credential.getAccessKey();
+func (c *DataDogLogClient) convertTags(tags map[string]string) string {
+	if tags == nil {
+		return ""
+	}
 
-//             super.open(correlationId, callback);
-//         });
-//     }
+	builder := ""
 
-//     func (c*DataDogLogClient) convertTags(tags []interface{}) string {
-//         if (tags == null) return null;
+	for key, val := range tags {
+		if builder != "" {
+			builder += ","
+		}
+		builder += key + ":" + val
+	}
+	return builder
+}
 
-//         let builder: string = "";
+func (c *DataDogLogClient) convertMessage(message DataDogLogMessage) interface{} {
 
-//         for (let key in tags) {
-//             if (builder != "")
-//                 builder += ",";
-//             builder += key + ":" + tags[key];
-//         }
-//         return builder;
-//     }
+	timestamp := message.Time
+	if timestamp.IsZero() {
+		timestamp = time.Now().UTC()
+	}
+	result := map[string]interface{}{
+		"timestamp": cconv.StringConverter.ToString(timestamp),
+		"service":   message.Service,
+		"message":   message.Message,
+	}
 
-//     func (c*DataDogLogClient) convertMessage(message DataDogLogMessage) interface{} {
-//          result := map[string]interface{}{
-//             "timestamp": StringConverter.ToString(message.time || new Date()),
-//             "status": message.status || "INFO",
-//             "ddsource": message.source || "pip-services",
-// //            "source": message.source || "pip-services",
-//             "service": message.service,
-//             "message": message.message,
-//         };
+	if message.Status != "" {
+		result["status"] = message.Status
+	} else {
+		result["status"] = "INFO"
+	}
 
-//         if (message.tags)
-//             result["ddtags"] = c.convertTags(message.tags);
-//         if (message.host)
-//             result["host"] = message.host;
-//         if (message.logger_name)
-//             result["logger.name"] = message.logger_name;
-//         if (message.thread_name)
-//             result["logger.thread_name"] = message.thread_name;
-//         if (message.error_message)
-//             result["error.message"] = message.error_message;
-//         if (message.error_kind)
-//             result["error.kind"] = message.error_kind;
-//         if (message.error_stack)
-//             result["error.stack"] = message.error_stack;
+	if message.Source != "" {
+		result["ddsource"] = message.Source
+	} else {
+		result["ddsource"] = "pip-services"
+	}
 
-//         return result;
-//     }
+	if message.Tags != nil {
+		result["ddtags"] = c.convertTags(message.Tags)
+	}
+	if message.Host != "" {
+		result["host"] = message.Host
+	}
+	if message.LoggerName != "" {
+		result["logger.name"] = message.LoggerName
+	}
+	if message.ThreadName != "" {
+		result["logger.thread_name"] = message.ThreadName
+	}
+	if message.ErrorMessage != "" {
+		result["error.message"] = message.ErrorMessage
+	}
+	if message.ErrorKind != "" {
+		result["error.kind"] = message.ErrorKind
+	}
+	if message.ErrorStack != "" {
+		result["error.stack"] = message.ErrorStack
+	}
 
-//     func (c*DataDogLogClient) convertMessages(messages []DataDogLogMessage)[] interface{} {
-//         return _.map(messages, (m) => {return c.convertMessage(m);});
-//     }
+	return result
+}
 
-//     func (c*DataDogLogClient) SendLogs(correlationId string, messages []DataDogLogMessage) error {
-//         let data = c.convertMessages(messages);
+func (c *DataDogLogClient) convertMessages(messages []DataDogLogMessage) []interface{} {
+	result := make([]interface{}, 0)
 
-//         // Commented instrumentation because otherwise it will never stop sending logs...
-//         //let timing = c.instrument(correlationId, "datadog.send_logs");
-//         c.Call("post", "input", null, null, data, (err, result) => {
-//             //timing.endTiming();
-//             c.instrumentError(correlationId, "datadog.send_logs", err, result, callback);
-//         });
-//     }
+	for _, msg := range messages {
+		result = append(result, c.convertMessage(msg))
+	}
+	return result
+}
+
+func (c *DataDogLogClient) SendLogs(correlationId string, messages []DataDogLogMessage) error {
+	data := c.convertMessages(messages)
+
+	// Commented instrumentation because otherwise it will never stop sending logs...
+	//let timing = c.instrument(correlationId, "datadog.send_logs");
+	result, err := c.Call(nil, "post", "input", correlationId, nil, data)
+	//timing.endTiming();
+	_, err = c.InstrumentError(correlationId, "datadog.send_logs", err, result)
+	return err
+
+}

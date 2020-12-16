@@ -1,75 +1,77 @@
-import { ConfigParams } from 'pip-services3-commons-node';
-import { RandomDouble } from 'pip-services3-commons-node';
+package clients_test
 
-import { DataDogMetricsClient } from '../../src/clients/DataDogMetricsClient';
-import { DataDogMetric } from '../../src/clients/DataDogMetric';
-import { DataDogMetricType } from '../../src/clients/DataDogMetricType';
+import (
+	"os"
+	"testing"
+	"time"
 
-let assert = require('chai').assert;
+	cconf "github.com/pip-services3-go/pip-services3-commons-go/config"
+	rnd "github.com/pip-services3-go/pip-services3-commons-go/random"
+	clients1 "github.com/pip-services3-go/pip-services3-datadog-go/clients"
+	"github.com/stretchr/testify/assert"
+)
 
-suite('DataDogMetricClient', () => {
-    let _client: DataDogMetricsClient;
+func TestDataDogMetricClient(t *testing.T) {
+	var client *clients1.DataDogMetricsClient
 
-    setup((done) => {
-        let apiKey = process.env['DATADOG_API_KEY'] || '3eb3355caf628d4689a72084425177ac';
+	apiKey := os.Getenv("DATADOG_API_KEY")
+	if apiKey == "" {
+		apiKey = "3eb3355caf628d4689a72084425177ac"
+	}
 
-        _client = new DataDogMetricsClient();
+	client = clients1.NewDataDogMetricsClient(nil)
 
-        let config = ConfigParams.fromTuples(
-            'source', 'test',
-            'credential.access_key', apiKey
-        );
-        _client.configure(config);
+	config := cconf.NewConfigParamsFromTuples(
+		"source", "test",
+		"credential.access_key", apiKey,
+	)
+	client.Configure(config)
 
-        _client.open(null, (err) => {
-            done(err);
-        });
-    });
+	err := client.Open("")
+	assert.Nil(t, err)
 
-    teardown((done) => {
-        _client.close(null, done);
-    });
+	defer client.Close("")
 
-    test('Send Metrics', (done) => {
-        let metrics: DataDogMetric[] = [
-            {
-                metric: 'test.metric.1',
-                service: 'TestService',
-                host: 'TestHost',
-                type: DataDogMetricType.Gauge,
-                points: [{
-                    time: new Date(),
-                    value: RandomDouble.nextDouble(0, 100)
-                }]
-            },
-            {
-                metric: 'test.metric.2',
-                service: 'TestService',
-                host: 'TestHost',
-                type: DataDogMetricType.Rate,
-                interval: 100,
-                points: [{
-                    time: new Date(),
-                    value: RandomDouble.nextDouble(0, 100)
-                }]
-            },
-            {
-                metric: 'test.metric.3',
-                service: 'TestService',
-                host: 'TestHost',
-                type: DataDogMetricType.Count,
-                interval: 100,
-                points: [{
-                    time: new Date(),
-                    value: RandomDouble.nextDouble(0, 100)
-                }]
-            }
-        ];
+	t.Run("Send Metrics", func(t *testing.T) {
+		metrics := []clients1.DataDogMetric{
+			clients1.DataDogMetric{
+				Metric:  "test.metric.1",
+				Service: "TestService Golang",
+				Host:    "TestHost",
+				Type:    clients1.Gauge,
+				Points: []clients1.DataDogMetricPoint{
+					clients1.DataDogMetricPoint{
+						Time:  time.Now().UTC(),
+						Value: rnd.RandomDouble.NextDouble(0, 100),
+					}},
+			},
+			clients1.DataDogMetric{
+				Metric:   "test.metric.2",
+				Service:  "TestService Golang",
+				Host:     "TestHost",
+				Type:     clients1.Rate,
+				Interval: 100,
+				Points: []clients1.DataDogMetricPoint{clients1.DataDogMetricPoint{
+					Time:  time.Now().UTC(),
+					Value: rnd.RandomDouble.NextDouble(0, 100),
+				}},
+			},
+			clients1.DataDogMetric{
+				Metric:   "test.metric.3",
+				Service:  "TestService Golang",
+				Host:     "TestHost",
+				Type:     clients1.Count,
+				Interval: 100,
+				Points: []clients1.DataDogMetricPoint{clients1.DataDogMetricPoint{
+					Time:  time.Now().UTC(),
+					Value: rnd.RandomDouble.NextDouble(0, 100),
+				}},
+			},
+		}
 
-        _client.sendMetrics(null, metrics, (err) => {
-            assert.isNull(err);
-            done(err);
-        });
-    });
+		err := client.SendMetrics("", metrics)
+		assert.Nil(t, err)
 
-});
+	})
+
+}

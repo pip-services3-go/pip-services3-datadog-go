@@ -1,46 +1,49 @@
-// import { ConfigParams } from 'pip-services3-commons-node';
+package log_test
 
-// import { DataDogLogger } from '../../src/log/DataDogLogger';
-// import { LoggerFixture } from '../fixtures/LoggerFixture';
+import (
+	"os"
+	"testing"
 
-// let assert = require('chai').assert;
-// let async = require('async');
+	cconf "github.com/pip-services3-go/pip-services3-commons-go/config"
+	ddlog "github.com/pip-services3-go/pip-services3-datadog-go/log"
+	ddfixture "github.com/pip-services3-go/pip-services3-datadog-go/test/fixtures"
 
-// suite('DataDogLogger', () => {
-//     let _logger: DataDogLogger;
-//     let _fixture: LoggerFixture;
+	"github.com/stretchr/testify/assert"
+)
 
-//     setup((done) => {
-//         let apiKey = process.env['DATADOG_API_KEY'] || '3eb3355caf628d4689a72084425177ac';
+func TestDataDogLogger(t *testing.T) {
+	var logger *ddlog.DataDogLogger
+	var fixture *ddfixture.LoggerFixture
 
-//         _logger = new DataDogLogger();
-//         _fixture = new LoggerFixture(_logger);
+	apiKey := os.Getenv("DATADOG_API_KEY")
+	if apiKey == "" {
+		apiKey = "3eb3355caf628d4689a72084425177ac"
+	}
 
-//         let config = ConfigParams.fromTuples(
-//             'source', 'test',
-//             'credential.access_key', apiKey
-//         );
-//         _logger.configure(config);
+	logger = ddlog.NewDataDogLogger()
+	fixture = ddfixture.NewLoggerFixture(logger.CachedLogger)
 
-//         _logger.open(null, (err) => {
-//             done(err);
-//         });
-//     });
+	config := cconf.NewConfigParamsFromTuples(
+		"source", "test",
+		"credential.access_key", apiKey,
+	)
+	logger.Configure(config)
 
-//     teardown((done) => {
-//         _logger.close(null, done);
-//     });
+	err := logger.Open("")
+	assert.Nil(t, err)
 
-//     test('Log Level', () => {
-//         _fixture.testLogLevel();
-//     });
+	defer logger.Close("")
 
-//     test('Simple Logging', (done) => {
-//         _fixture.testSimpleLogging(done);
-//     });
+	t.Run("Log Level", func(t *testing.T) {
+		fixture.TestLogLevel(t)
+	})
 
-//     test('Error Logging', (done) => {
-//         _fixture.testErrorLogging(done);
-//     });
+	t.Run("Simple Logging", func(t *testing.T) {
+		fixture.TestSimpleLogging(t)
+	})
 
-// });
+	t.Run("Error Logging", func(t *testing.T) {
+		fixture.TestErrorLogging(t)
+	})
+
+}

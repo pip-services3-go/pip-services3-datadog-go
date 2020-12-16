@@ -1,40 +1,45 @@
-import { ConfigParams } from 'pip-services3-commons-node';
-import { References } from 'pip-services3-commons-node';
+package count_test
 
-import { DataDogCounters } from '../../src/count/DataDogCounters';
-import { CountersFixture } from '../fixtures/CountersFixture';
+import (
+	"os"
+	"testing"
 
-suite('DataDogCounters', ()=> {
-    let _counters: DataDogCounters;
-    let _fixture: CountersFixture;
+	cconf "github.com/pip-services3-go/pip-services3-commons-go/config"
+	ddcount "github.com/pip-services3-go/pip-services3-datadog-go/count"
+	ddfixture "github.com/pip-services3-go/pip-services3-datadog-go/test/fixtures"
 
-    setup((done) => {
-        let apiKey = process.env['DATADOG_API_KEY'] || '3eb3355caf628d4689a72084425177ac';
+	"github.com/stretchr/testify/assert"
+)
 
-        _counters = new DataDogCounters();
-        _fixture = new CountersFixture(_counters);
+func TestDataDogCounters(t *testing.T) {
+	var counters *ddcount.DataDogCounters
+	var fixture *ddfixture.CountersFixture
 
-        let config = ConfigParams.fromTuples(
-            'source', 'test',
-            'credential.access_key', apiKey
-        );
-        _counters.configure(config);
+	apiKey := os.Getenv("DATADOG_API_KEY")
+	if apiKey == "" {
+		apiKey = "3eb3355caf628d4689a72084425177ac"
+	}
 
-        _counters.open(null, (err) => {
-             done(err);
-        });
-    });
+	counters = ddcount.NewDataDogCounters()
+	fixture = ddfixture.NewCountersFixture(counters.CachedCounters)
 
-    teardown((done) => {
-        _counters.close(null, done);
-    });
+	config := cconf.NewConfigParamsFromTuples(
+		"source", "test",
+		"credential.access_key", apiKey,
+	)
+	counters.Configure(config)
 
-    test('Simple Counters', (done) => {
-        _fixture.testSimpleCounters(done);
-    });
+	err := counters.Open("")
+	assert.Nil(t, err)
 
-    test('Measure Elapsed Time', (done) => {
-        _fixture.testMeasureElapsedTime(done);
-    });
+	defer counters.Close("")
 
-});
+	t.Run("Simple Counters", func(t *testing.T) {
+		fixture.TestSimpleCounters(t)
+	})
+
+	t.Run("Measure Elapsed Time", func(t *testing.T) {
+		fixture.TestMeasureElapsedTime(t)
+	})
+
+}

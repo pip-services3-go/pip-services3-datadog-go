@@ -1,33 +1,29 @@
-/** @module log */
-/** @hidden */
-const _ = require('lodash');
-const os = require('os');
+package log
 
-import { ConfigParams } from 'pip-services3-commons-node';
-import { IReferences } from 'pip-services3-commons-node';
-import { IReferenceable } from 'pip-services3-commons-node';
-import { IOpenable } from 'pip-services3-commons-node';
-import { CachedLogger } from 'pip-services3-components-node';
-import { LogMessage } from 'pip-services3-components-node';
-import { Descriptor } from 'pip-services3-commons-node';
-import { ContextInfo } from 'pip-services3-components-node';
+import (
+	"os"
+	"time"
 
-import { DataDogLogMessage } from '../clients/DataDogLogMessage';
-import { DataDogStatus } from '../clients/DataDogStatus';
-import { DataDogLogClient } from '../clients/DataDogLogClient';
+	cconf "github.com/pip-services3-go/pip-services3-commons-go/config"
+	cref "github.com/pip-services3-go/pip-services3-commons-go/refer"
+	cinfo "github.com/pip-services3-go/pip-services3-components-go/info"
+	"github.com/pip-services3-go/pip-services3-components-go/log"
+	clog "github.com/pip-services3-go/pip-services3-components-go/log"
+	clients1 "github.com/pip-services3-go/pip-services3-datadog-go/clients"
+)
 
 /**
  * Logger that dumps execution logs to DataDog service.
- * 
+ *
  * DataDog is a popular monitoring SaaS service. It collects logs, metrics, events
  * from infrastructure and applications and analyze them in a single place.
- * 
+ *
  * ### Configuration parameters ###
- * 
+ *
  * - level:             maximum log level to capture
  * - source:            source (context) name
  * - connection:
- *     - discovery_key:         (optional) a key to retrieve the connection from [[https://pip-services3-node.github.io/pip-services3-components-node/interfaces/connect.idiscovery.html IDiscovery]]
+ *     - discovery_key:         (optional) a key to retrieve the connection from [[IDiscovery]]
  *     - protocol:              (optional) connection protocol: http or https (default: https)
  *     - host:                  (optional) host name or IP address (default: http-intake.logs.datadoghq.com)
  *     - port:                  (optional) port number (default: 443)
@@ -40,169 +36,178 @@ import { DataDogLogClient } from '../clients/DataDogLogClient';
  *     - reconnect:       reconnect timeout in milliseconds (default: 60 sec)
  *     - timeout:         invocation timeout in milliseconds (default: 30 sec)
  *     - max_retries:     maximum number of retries (default: 3)
- * 
+ *
  * ### References ###
- * 
- * - <code>\*:context-info:\*:\*:1.0</code>      (optional) [[https://pip-services3-node.github.io/pip-services3-components-node/classes/info.contextinfo.html ContextInfo]] to detect the context id and specify counters source
- * - <code>\*:discovery:\*:\*:1.0</code>         (optional) [[https://pip-services3-node.github.io/pip-services3-components-node/interfaces/connect.idiscovery.html IDiscovery]] services to resolve connection
- * 
+ *
+ * - \*:context-info:\*:\*:1.0      (optional) [[ContextInfo]] to detect the context id and specify counters source
+ * - \*:discovery:\*:\*:1.0         (optional) [[IDiscovery]] services to resolve connection
+ *
  * ### Example ###
- * 
- *     let logger = new DataDogLogger();
- *     logger.configure(ConfigParams.fromTuples(
+ *
+ *     logger := NewDataDogLogger();
+ *     logger.Configure(NewConfigParamsFromTuples(
  *         "credential.access_key", "827349874395872349875493"
  *     ));
- *     
- *     logger.open("123", (err) => {
- *         ...
- *     });
- *     
- *     logger.error("123", ex, "Error occured: %s", ex.message);
- *     logger.debug("123", "Everything is OK.");
+ *
+ *     err := logger.Open("123");
+ *
+ *     logger.Error("123", ex, "Error occured: %s", ex.message);
+ *     logger.Debug("123", "Everything is OK.");
  */
-export class DataDogLogger extends CachedLogger implements IReferenceable, IOpenable {
-    private _client: DataDogLogClient = new DataDogLogClient();
-    private _timer: any;
-    private _instance: string = os.hostname();
 
-    /**
-     * Creates a new instance of the logger.
-     */
-    public constructor() {
-        super();
-    }
+type DataDogLogger struct {
+	*clog.CachedLogger
+	client   *clients1.DataDogLogClient
+	timer    chan bool
+	instance string
+}
 
-    /**
-     * Configures component by passing configuration parameters.
-     * 
-     * @param config    configuration parameters to be set.
-     */
-    public configure(config: ConfigParams): void {
-        super.configure(config);
-        this._client.configure(config);
+//  NewDataDogLogger - Creates a new instance of the logger.
+func NewDataDogLogger() *DataDogLogger {
+	c := DataDogLogger{
+		client: clients1.NewDataDogLogClient(nil),
+	}
+	c.CachedLogger = log.InheritCachedLogger(&c)
+	c.instance, _ = os.Hostname()
+	return &c
+}
 
-        this._instance = config.getAsStringWithDefault("instance", this._instance);
-    }
+// Сonfigure -  Configures component by passing configuration parameters.
+//   - config    configuration parameters to be set.
+func (c *DataDogLogger) Configure(config *cconf.ConfigParams) {
+	c.CachedLogger.Configure(config)
+	c.client.Configure(config)
+	c.instance = config.GetAsStringWithDefault("instance", c.instance)
+}
 
-    /**
-	 * Sets references to dependent components.
-	 * 
-	 * @param references 	references to locate the component dependencies. 
-     */
-    public setReferences(references: IReferences): void {
-        super.setReferences(references);
-        this._client.setReferences(references);
+// SetReferences - Sets references to dependent components.
+//   - references 	references to locate the component dependencies.
+func (c *DataDogLogger) SetReferences(references cref.IReferences) {
+	c.CachedLogger.SetReferences(references)
+	c.client.SetReferences(references)
+	ref := references.GetOneOptional(cref.NewDescriptor("pip-services", "context-info", "default", "*", "1.0"))
 
-        let contextInfo = references.getOneOptional<ContextInfo>(
-            new Descriptor("pip-services", "context-info", "default", "*", "1.0"));
-        if (contextInfo != null && this._source == null)
-            this._source = contextInfo.name;
-        if (contextInfo != null && this._instance == null)
-            this._instance = contextInfo.contextId;
-    }
+	contextInfo, _ := ref.(*cinfo.ContextInfo)
 
-    /**
-	 * Checks if the component is opened.
-	 * 
-	 * @returns true if the component has been opened and false otherwise.
-     */
-    public isOpen(): boolean {
-        return this._timer != null;
-    }
+	if contextInfo != nil && c.Source() == "" {
+		c.SetSource(contextInfo.Name)
+	}
+	if contextInfo != nil && c.instance == "" {
+		c.instance = contextInfo.ContextId
+	}
+}
 
-    /**
-	 * Opens the component.
-	 * 
-	 * @param correlationId 	(optional) transaction id to trace execution through call chain.
-     * @param callback 			callback function that receives error or null no errors occured.
-     */
-    public open(correlationId: string, callback: (err: any) => void): void {
-        if (this.isOpen()) {
-            callback(null);
-            return;
-        }
+// IsOpen - Checks if the component is opened.
+//   Returns true if the component has been opened and false otherwise.
+func (c *DataDogLogger) IsOpen() bool {
+	return c.timer != nil
+}
 
-        this._client.open(correlationId, (err) => {
-            if (err == null) {
-                this._timer = setInterval(() => { this.dump() }, this._interval);
-            }
+//  Open -  Opens the component.
+//   - correlationId 	(optional) transaction id to trace execution through call chain.
+//   - Returns error or nil no errors occured.
+func (c *DataDogLogger) Open(correlationId string) error {
+	if c.IsOpen() {
+		return nil
+	}
 
-            callback(err);
-        });
-    }
+	err := c.client.Open(correlationId)
+	if err == nil {
+		c.timer = c.setInterval(func() { c.Dump() }, c.Interval, true)
+	}
 
-    /**
-	 * Closes component and frees used resources.
-	 * 
-	 * @param correlationId 	(optional) transaction id to trace execution through call chain.
-     * @param callback 			callback function that receives error or null no errors occured.
-     */
-    public close(correlationId: string, callback: (err: any) => void): void {
-        this.save(this._cache, (err) => {
-            if (this._timer)
-                clearInterval(this._timer);
+	return err
 
-            this._cache = [];
-            this._timer = null;
+}
 
-            this._client.close(correlationId, callback);
-        });
-    }
+//  Close - Closes component and frees used resources.
+//   - correlationId 	(optional) transaction id to trace execution through call chain.
+//   - Returns error or nil no errors occured.
+func (c *DataDogLogger) Close(correlationId string) error {
+	err := c.Save(c.Cache)
 
-    // private convertStatus(level: number): string {
-    //     switch (level) {
-    //         case LogLevel.Fatal:
-    //             return DataDogStatus.Emergency;
-    //         case LogLevel.Error:
-    //             return DataDogStatus.Error;
-    //         case LogLevel.Warn:
-    //             return DataDogStatus.Warn;
-    //         case LogLevel.Info:
-    //             return DataDogStatus.Info;
-    //         case LogLevel.Debug:
-    //             return DataDogStatus.Debug;
-    //         case LogLevel.Trace:
-    //             return DataDogStatus.Debug;
-    //         default:
-    //             return DataDogStatus.Info;
-    //     }
-    // }
+	if err != nil {
+		return err
+	}
 
-    private convertMessage(message: LogMessage): DataDogLogMessage {
-        let result: DataDogLogMessage = {
-            time: message.time || new Date(),
-            tags: {
-                correlation_id: message.correlation_id
-            },
-            host: this._instance,
-            service: message.source || this._source,
-            status: message.level,
-            message: message.message
-        };
+	if c.timer != nil {
+		c.timer <- true
+	}
 
-        if (message.error) {
-            result.error_kind = message.error.type;
-            result.error_message = message.error.message;
-            result.error_stack = message.error.stack_trace
-        }
+	c.Cache = make([]*clog.LogMessage, 0, 0)
+	c.timer = nil
 
-        return result;
-    }
+	return c.client.Close(correlationId)
 
-    /**
-     * Saves log messages from the cache.
-     * 
-     * @param messages  a list with log messages
-     * @param callback  callback function that receives error or null for success.
-     */
-    protected save(messages: LogMessage[], callback: (err: any) => void): void {
-        if (!this.isOpen() || messages.length == 0) {
-            if (callback) callback(null);
-            return;
-        }
+}
 
-        let data = _.map(messages, (m) => { return this.convertMessage(m); });
+func (c *DataDogLogger) convertMessage(message *clog.LogMessage) clients1.DataDogLogMessage {
 
-        this._client.sendLogs("datadog-logger", data, callback);
-    }
+	tm := message.Time
+	if tm.IsZero() {
+		tm = time.Now().UTC()
+	}
+	result := clients1.DataDogLogMessage{
+		Time: tm,
+		Tags: map[string]string{
+			"correlation_id": message.CorrelationId,
+		},
+		Host:    c.instance,
+		Status:  clog.LogLevelConverter.ToString(message.Level),
+		Message: message.Message,
+	}
+
+	result.Service = message.Source
+	if result.Service == "" {
+		result.Service = c.Source()
+	}
+
+	if message.Error.Message != "" || message.Error.Code != "" {
+		result.ErrorKind = message.Error.Type
+		result.ErrorMessage = message.Error.Message
+		result.ErrorStack = message.Error.StackTrace
+	}
+
+	return result
+}
+
+//   Saves log messages from the cache.
+//   - messages  a list with log messages
+//   - Returns error or nil for success.
+func (c *DataDogLogger) Save(messages []*clog.LogMessage) error {
+	if !c.IsOpen() || len(messages) == 0 {
+		return nil
+	}
+
+	data := make([]clients1.DataDogLogMessage, 0)
+	for _, m := range messages {
+		data = append(data, c.convertMessage(m))
+	}
+
+	return c.client.SendLogs("datadog-logger", data)
+}
+
+func (c *DataDogLogger) setInterval(someFunc func(), milliseconds int, async bool) chan bool {
+
+	interval := time.Duration(milliseconds) * time.Millisecond
+	ticker := time.NewTicker(interval)
+	clear := make(chan bool)
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				if async {
+					go someFunc()
+				} else {
+					someFunc()
+				}
+			case <-clear:
+				ticker.Stop()
+				return
+			}
+
+		}
+	}()
+
+	return clear
 }
