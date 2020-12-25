@@ -4,10 +4,7 @@
 $component = Get-Content -Path "component.json" | ConvertFrom-Json
 $buildImage="$($component.registry)/$($component.name):$($component.version)-$($component.build)-build"
 $docsImage="$($component.registry)/$($component.name):$($component.version)-$($component.build)-docs"
-$protosImage="$($component.registry)/$($component.name):$($component.version)-$($component.build)-protos"
 $testImage="$($component.registry)/$($component.name):$($component.version)-$($component.build)-test"
-$rcImage="$($component.registry)/$($component.name):$($component.version)-$($component.build)-rc"
-$latestImage="$($component.registry)/$($component.name):latest"
 
 # Clean up build directories
 Get-ChildItem -Path "." -Include "exe" -Recurse | foreach($_) { Remove-Item -Force -Recurse $_.FullName }
@@ -15,10 +12,7 @@ Get-ChildItem -Path "." -Include "exe" -Recurse | foreach($_) { Remove-Item -For
 # Remove docker images
 docker rmi $buildImage --force
 docker rmi $docsImage --force
-docker rmi $protosImage --force
 docker rmi $testImage --force
-docker rmi $rcImage --force
-docker rmi $latestImage --force
 docker image prune --force
 docker rmi -f $(docker images -f "dangling=true" -q) # remove build container if build fails
 

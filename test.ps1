@@ -3,7 +3,6 @@
 Set-StrictMode -Version latest
 $ErrorActionPreference = "Stop"
 
-# Generate an image name using the data in the "component.json" file
 $component = Get-Content -Path "component.json" | ConvertFrom-Json
 $testImage="$($component.registry)/$($component.name):$($component.version)-$($component.build)-test"
 
