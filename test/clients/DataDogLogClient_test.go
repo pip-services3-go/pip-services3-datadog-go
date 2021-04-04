@@ -33,21 +33,21 @@ func TestDataDogLogClient(t *testing.T) {
 
 	t.Run("Send Logs", func(t *testing.T) {
 		messages := []clients1.DataDogLogMessage{
-			clients1.DataDogLogMessage{
+			{
 				Time:    time.Now().UTC(),
 				Service: "TestService",
 				Host:    "TestHost",
 				Status:  clients1.Debug,
 				Message: "Test trace message",
 			},
-			clients1.DataDogLogMessage{
+			{
 				Time:    time.Now().UTC(),
 				Service: "TestService",
 				Host:    "TestHost",
 				Status:  clients1.Info,
 				Message: "Test info message",
 			},
-			clients1.DataDogLogMessage{
+			{
 				Time:       time.Now().UTC(),
 				Service:    "TestService",
 				Host:       "TestHost",
@@ -56,7 +56,7 @@ func TestDataDogLogClient(t *testing.T) {
 				ErrorKind:  "Exception",
 				ErrorStack: "Stack trace...",
 			},
-			clients1.DataDogLogMessage{
+			{
 				Time:       time.Now().UTC(),
 				Service:    "TestService",
 				Host:       "TestHost",

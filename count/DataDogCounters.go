@@ -140,46 +140,46 @@ func (c *DataDogCounters) Close(correlationId string) error {
 func (c *DataDogCounters) convertCounter(counter *ccount.Counter) []clients1.DataDogMetric {
 	switch counter.Type {
 	case ccount.Increment:
-		return []clients1.DataDogMetric{clients1.DataDogMetric{
+		return []clients1.DataDogMetric{{
 			Metric:  counter.Name,
 			Type:    clients1.Gauge,
 			Host:    c.instance,
 			Service: c.source,
-			Points:  []clients1.DataDogMetricPoint{clients1.DataDogMetricPoint{Time: counter.Time, Value: (float64)(counter.Count)}},
+			Points:  []clients1.DataDogMetricPoint{{Time: counter.Time, Value: (float64)(counter.Count)}},
 		}}
 
 	case ccount.LastValue:
-		return []clients1.DataDogMetric{clients1.DataDogMetric{
+		return []clients1.DataDogMetric{{
 			Metric:  counter.Name,
 			Type:    clients1.Gauge,
 			Host:    c.instance,
 			Service: c.source,
-			Points:  []clients1.DataDogMetricPoint{clients1.DataDogMetricPoint{Time: counter.Time, Value: (float64)(counter.Last)}},
+			Points:  []clients1.DataDogMetricPoint{{Time: counter.Time, Value: (float64)(counter.Last)}},
 		}}
 
 	case ccount.Interval:
 	case ccount.Statistics:
 		return []clients1.DataDogMetric{
-			clients1.DataDogMetric{
+			{
 				Metric:  counter.Name + ".min",
 				Type:    clients1.Gauge,
 				Host:    c.instance,
 				Service: c.source,
-				Points:  []clients1.DataDogMetricPoint{clients1.DataDogMetricPoint{Time: counter.Time, Value: (float64)(counter.Min)}},
+				Points:  []clients1.DataDogMetricPoint{{Time: counter.Time, Value: (float64)(counter.Min)}},
 			},
-			clients1.DataDogMetric{
+			{
 				Metric:  counter.Name + ".average",
 				Type:    clients1.Gauge,
 				Host:    c.instance,
 				Service: c.source,
-				Points:  []clients1.DataDogMetricPoint{clients1.DataDogMetricPoint{Time: counter.Time, Value: (float64)(counter.Average)}},
+				Points:  []clients1.DataDogMetricPoint{{Time: counter.Time, Value: (float64)(counter.Average)}},
 			},
-			clients1.DataDogMetric{
+			{
 				Metric:  counter.Name + ".max",
 				Type:    clients1.Gauge,
 				Host:    c.instance,
 				Service: c.source,
-				Points:  []clients1.DataDogMetricPoint{clients1.DataDogMetricPoint{Time: counter.Time, Value: (float64)(counter.Max)}},
+				Points:  []clients1.DataDogMetricPoint{{Time: counter.Time, Value: (float64)(counter.Max)}},
 			},
 		}
 	}

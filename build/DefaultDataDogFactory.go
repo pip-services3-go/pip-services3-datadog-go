@@ -1,23 +1,31 @@
-// /** @module build */
-// import { Factory } from 'pip-services3-components-node';
-// import { Descriptor } from 'pip-services3-commons-node';
+package build
 
-// import { DataDogLogger } from '../log/DataDogLogger';
+import (
+	cref "github.com/pip-services3-go/pip-services3-commons-go/refer"
+	cbuild "github.com/pip-services3-go/pip-services3-components-go/build"
+	count "github.com/pip-services3-go/pip-services3-datadog-go/count"
+	log "github.com/pip-services3-go/pip-services3-datadog-go/log"
+)
 
-// /**
-//  * Creates DataDog components by their descriptors.
-//  * 
-//  * @see [[DataDogLogger]]
-//  */
-// export class DefaultDataDogFactory extends Factory {
-// 	public static readonly Descriptor = new Descriptor("pip-services", "factory", "datadog", "default", "1.0");
-// 	public static readonly DataDogLoggerDescriptor = new Descriptor("pip-services", "logger", "datadog", "*", "1.0");
+/*
+DefaultDataDogFactory are creates DataDog components by their descriptors.
+See DataDogLogger
+*/
+type DefaultDataDogFactory struct {
+	cbuild.Factory
+}
 
-// 	/**
-// 	 * Create a new instance of the factory.
-// 	 */
-// 	public constructor() {
-//         super();
-// 		this.registerAsType(DefaultDataDogFactory.DataDogLoggerDescriptor, DataDogLogger);
-// 	}
-// }
+// NewDefaultDataDogFactory create a new instance of the factory.
+// Retruns *DefaultDataDogFactory
+// pointer on new factory
+func NewDefaultDataDogFactory() *DefaultDataDogFactory {
+	c := DefaultDataDogFactory{}
+	c.Factory = *cbuild.NewFactory()
+	dataDogLoggerDescriptor := cref.NewDescriptor("pip-services", "logger", "datadog", "*", "1.0")
+	dataDogCountersDescriptor := cref.NewDescriptor("pip-services", "counters", "datadog", "*", "1.0")
+
+	c.RegisterType(dataDogLoggerDescriptor, log.NewDataDogLogger)
+	c.RegisterType(dataDogCountersDescriptor, count.NewDataDogCounters)
+
+	return &c
+}

@@ -34,38 +34,43 @@ func TestDataDogMetricClient(t *testing.T) {
 
 	t.Run("Send Metrics", func(t *testing.T) {
 		metrics := []clients1.DataDogMetric{
-			clients1.DataDogMetric{
+			{
 				Metric:  "test.metric.1",
 				Service: "TestService Golang",
 				Host:    "TestHost",
 				Type:    clients1.Gauge,
 				Points: []clients1.DataDogMetricPoint{
-					clients1.DataDogMetricPoint{
+					{
 						Time:  time.Now().UTC(),
 						Value: rnd.RandomDouble.NextDouble(0, 100),
-					}},
+					},
+				},
 			},
-			clients1.DataDogMetric{
+			{
 				Metric:   "test.metric.2",
 				Service:  "TestService Golang",
 				Host:     "TestHost",
 				Type:     clients1.Rate,
 				Interval: 100,
-				Points: []clients1.DataDogMetricPoint{clients1.DataDogMetricPoint{
-					Time:  time.Now().UTC(),
-					Value: rnd.RandomDouble.NextDouble(0, 100),
-				}},
+				Points: []clients1.DataDogMetricPoint{
+					{
+						Time:  time.Now().UTC(),
+						Value: rnd.RandomDouble.NextDouble(0, 100),
+					},
+				},
 			},
-			clients1.DataDogMetric{
+			{
 				Metric:   "test.metric.3",
 				Service:  "TestService Golang",
 				Host:     "TestHost",
 				Type:     clients1.Count,
 				Interval: 100,
-				Points: []clients1.DataDogMetricPoint{clients1.DataDogMetricPoint{
-					Time:  time.Now().UTC(),
-					Value: rnd.RandomDouble.NextDouble(0, 100),
-				}},
+				Points: []clients1.DataDogMetricPoint{
+					{
+						Time:  time.Now().UTC(),
+						Value: rnd.RandomDouble.NextDouble(0, 100),
+					},
+				},
 			},
 		}
 
