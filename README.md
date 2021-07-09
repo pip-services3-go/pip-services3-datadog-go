@@ -1,13 +1,13 @@
-# <img src="https://uploads-ssl.webflow.com/5ea5d3315186cf5ec60c3ee4/5edf1c94ce4c859f2b188094_logo.svg" alt="Pip.Services Logo" width="200"> <br/> DataDog components for Node.js
+# <img src="https://uploads-ssl.webflow.com/5ea5d3315186cf5ec60c3ee4/5edf1c94ce4c859f2b188094_logo.svg" alt="Pip.Services Logo" width="200"> <br/> DataDog components for Golang
 
 This module is a part of the [Pip.Services](http://pipservices.org) polyglot microservices toolkit.
 It contains the DataDog logger and performance counters components.
 
 The module contains the following packages:
-- **Build**
-- **Clients**
-- **Count**
-- **Log**
+- [**Build**](build) - contains a class used to create DataDog components by their descriptors.
+- [**Clients**](clients) - contains constants and classes used to define REST clients for DataDog
+- [**Count**](count) - contains a class used to create performance counters that send their metrics to a DataDog service
+- [**Log**](log) - contains a class used to create loggers that dump execution logs to a DataDog service.
 
 <a name="links"></a> Quick links:
 
