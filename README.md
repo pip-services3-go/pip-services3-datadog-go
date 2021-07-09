@@ -19,32 +19,23 @@ The module contains the following packages:
 
 ## Use
 
-Install the NPM package as
+
+Get the package from the Github repository:
 ```bash
-npm install pip-services-datadog-node --save
+go get -u github.com/pip-services3-go/pip-services3-datadog-go@latest
 ```
 
 ## Develop
 
 For development you shall install the following prerequisites:
-* Node.js 8+
+* Golang v1.12+
 * Visual Studio Code or another IDE of your choice
 * Docker
-* Typescript
-
-Install dependencies:
-```bash
-npm install
-```
-
-Compile the code:
-```bash
-tsc
-```
+* Git
 
 Run automated tests:
 ```bash
-npm test
+go test -v ./test/...
 ```
 
 Generate API documentation:
@@ -52,9 +43,8 @@ Generate API documentation:
 ./docgen.ps1
 ```
 
-Before committing changes run dockerized build and test as:
+Before committing changes run dockerized test as:
 ```bash
-./build.ps1
 ./test.ps1
 ./clear.ps1
 ```
